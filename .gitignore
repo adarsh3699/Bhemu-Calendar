@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+**/node_modules/
+/.pnp
+.pnp.js
+
+# Build directories
+/dist
+/client/dist
+/client/build
+/server/dist
+/server/build
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+**/.env
+
+# Cache and logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+**/.cache
+**/logs
+**/*.log
+
+# Production
+/build
+
+# Testing
+/coverage
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.history
+
+# Temp files
+*.tmp
+*.temp
+*~
+
+# MongoDB data directory
+/data/db
+
+# Package lock files (optional, depending on your preference)
+# package-lock.json
+# yarn.lock
+
+# Debug
+.debug
+
+# Optional: Cypress generated files
+cypress/videos/
+cypress/screenshots/ 
