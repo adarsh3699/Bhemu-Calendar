@@ -8,11 +8,14 @@ import {
 	addWeeks,
 	subWeeks,
 	getHours,
+	getMinutes,
 	addHours,
 	setHours,
 	setMinutes,
 } from 'date-fns';
+import { DragDropContext } from '@hello-pangea/dnd';
 import { openModal } from '../redux/reducers/uiSlice';
+import { updateEvent, updateEventOptimistically } from '../redux/reducers/eventsSlice';
 import TimeSlot from './TimeSlot';
 import '../styles/WeekView.css';
 
@@ -52,6 +55,47 @@ const WeekView = () => {
 		);
 	};
 
+	// Handle drag and drop with optimistic updates
+	const handleDragEnd = (result) => {
+		if (!result.destination) return;
+
+		const { draggableId, destination } = result;
+		const eventId = draggableId;
+		const targetEvent = events.find((event) => event._id === eventId);
+
+		if (!targetEvent) return;
+
+		// Parse destination ID format: day-hour
+		const [dayIndex, hour] = destination.droppableId.split('-').map(Number);
+		const newDate = weekDays[dayIndex];
+
+		// Calculate new times
+		const minutes = getMinutes(new Date(targetEvent.startTime));
+		const duration = new Date(targetEvent.endTime) - new Date(targetEvent.startTime);
+
+		const newStartTime = setMinutes(setHours(newDate, hour), minutes);
+		const newEndTime = new Date(newStartTime.getTime() + duration);
+
+		// Create the updated event object
+		const updatedEvent = {
+			...targetEvent,
+			date: newDate.toISOString(),
+			startTime: newStartTime.toISOString(),
+			endTime: newEndTime.toISOString(),
+		};
+
+		// Optimistically update the UI
+		dispatch(updateEventOptimistically({ id: eventId, event: updatedEvent }));
+
+		// Update the event in the backend
+		dispatch(updateEvent({ id: eventId, event: updatedEvent }))
+			.unwrap()
+			.catch((error) => {
+				console.error('Failed to update event:', error);
+				// The error case is handled in the reducer
+			});
+	};
+
 	return (
 		<div className="week-view">
 			<div className="week-header">
@@ -70,7 +114,7 @@ const WeekView = () => {
 			</div>
 
 			<div className="week-grid">
-				{/* Days with time slots */}
+				{/* Time labels */}
 				<div className="time-labels">
 					<div className="day-header"></div>
 					{timeSlots.map((hour) => (
@@ -80,34 +124,39 @@ const WeekView = () => {
 					))}
 				</div>
 
-				{weekDays.map((day, dayIndex) => (
-					<div key={format(day, 'yyyy-MM-dd')} className="day-column">
-						<div className="day-header">
-							<div className="day-name">{format(day, 'EEE')}</div>
-							<div className="day-date">{format(day, 'd')}</div>
-						</div>
+				{/* Days with time slots */}
+				<DragDropContext onDragEnd={handleDragEnd}>
+					<div className="days-container">
+						{weekDays.map((day, dayIndex) => (
+							<div key={format(day, 'yyyy-MM-dd')} className="day-column">
+								<div className="day-header">
+									<div className="day-name">{format(day, 'EEE')}</div>
+									<div className="day-date">{format(day, 'd')}</div>
+								</div>
 
-						{timeSlots.map((hour) => (
-							<TimeSlot
-								key={`${dayIndex}-${hour}`}
-								day={day}
-								dayIndex={dayIndex}
-								hour={hour}
-								events={events.filter((event) => {
-									const eventDate = new Date(event.date);
-									const eventStartHour = getHours(new Date(event.startTime));
-									return (
-										eventDate.getDate() === day.getDate() &&
-										eventDate.getMonth() === day.getMonth() &&
-										eventDate.getFullYear() === day.getFullYear() &&
-										eventStartHour === hour
-									);
-								})}
-								onClick={() => handleTimeSlotClick(day, hour)}
-							/>
+								{timeSlots.map((hour) => (
+									<TimeSlot
+										key={`${dayIndex}-${hour}`}
+										day={day}
+										dayIndex={dayIndex}
+										hour={hour}
+										events={events.filter((event) => {
+											const eventDate = new Date(event.date);
+											const eventStartHour = getHours(new Date(event.startTime));
+											return (
+												eventDate.getDate() === day.getDate() &&
+												eventDate.getMonth() === day.getMonth() &&
+												eventDate.getFullYear() === day.getFullYear() &&
+												eventStartHour === hour
+											);
+										})}
+										onClick={() => handleTimeSlotClick(day, hour)}
+									/>
+								))}
+							</div>
 						))}
 					</div>
-				))}
+				</DragDropContext>
 			</div>
 		</div>
 	);

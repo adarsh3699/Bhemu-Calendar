@@ -57,7 +57,16 @@ const eventsSlice = createSlice({
         loading: false,
         error: null,
     },
-    reducers: {},
+    reducers: {
+        // Add optimistic update reducer
+        updateEventOptimistically: (state, action) => {
+            const { id, event } = action.payload;
+            const index = state.events.findIndex((e) => e._id === id);
+            if (index !== -1) {
+                state.events[index] = { ...state.events[index], ...event };
+            }
+        },
+    },
     extraReducers: (builder) => {
         builder
             // Fetch events
@@ -86,16 +95,21 @@ const eventsSlice = createSlice({
             })
             // Update event
             .addCase(updateEvent.pending, (state) => {
-                state.loading = true;
+                state.loading = false; // Don't show loading state for updates
             })
             .addCase(updateEvent.fulfilled, (state, action) => {
-                state.loading = false;
                 const index = state.events.findIndex((event) => event._id === action.payload._id);
-                state.events[index] = action.payload;
+                if (index !== -1) {
+                    state.events[index] = action.payload;
+                }
             })
             .addCase(updateEvent.rejected, (state, action) => {
-                state.loading = false;
                 state.error = action.payload;
+                // Revert optimistic update on error
+                const index = state.events.findIndex((event) => event._id === action.meta.arg.id);
+                if (index !== -1) {
+                    state.events[index] = action.meta.arg.event;
+                }
             })
             // Delete event
             .addCase(deleteEvent.pending, (state) => {
@@ -112,4 +126,5 @@ const eventsSlice = createSlice({
     },
 });
 
+export const { updateEventOptimistically } = eventsSlice.actions;
 export default eventsSlice.reducer; 

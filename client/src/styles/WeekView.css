@@ -42,9 +42,9 @@
     align-items: center;
     border-bottom: 1px solid var(--border-color);
     background-color: var(--secondary-color);
-    position: sticky;
-    top: 73.69px;
-    z-index: 1;
+    /* position: sticky;
+    top: 0px;
+    z-index: 1; */
 }
 
 .hour-label {
