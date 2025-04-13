@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import eventRoutes from './routes/events.js';
+import goalRoutes from './routes/goals.js';
+import taskRoutes from './routes/tasks.js';
 
 dotenv.config();
 
@@ -20,6 +22,8 @@ app.get("/", function (req, res) {
 });
 
 app.use('/events', eventRoutes);
+app.use('/goals', goalRoutes);
+app.use('/tasks', taskRoutes);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)

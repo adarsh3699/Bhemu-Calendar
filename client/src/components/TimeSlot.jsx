@@ -25,16 +25,21 @@ const TimeSlot = ({ dayIndex, hour, events = [], onClick }) => {
 
 	return (
 		<Droppable droppableId={slotId}>
-			{(provided) => (
-				<div className="time-slot" onClick={onClick} ref={provided.innerRef} {...provided.droppableProps}>
+			{(provided, snapshot) => (
+				<div
+					className={`time-slot ${snapshot.isDraggingOver ? 'dragging-over' : ''}`}
+					onClick={onClick}
+					ref={provided.innerRef}
+					{...provided.droppableProps}
+				>
 					{events.map((event, index) => (
-						<Draggable key={event._id} draggableId={event._id} index={index}>
-							{(provided) => (
+						<Draggable key={event._id} draggableId={`event-${event._id}`} index={index}>
+							{(provided, snapshot) => (
 								<div
 									ref={provided.innerRef}
 									{...provided.draggableProps}
 									{...provided.dragHandleProps}
-									className="event-card"
+									className={`event-card ${snapshot.isDragging ? 'dragging' : ''}`}
 									style={{
 										...provided.draggableProps.style,
 										backgroundColor: categoryColors[event.category] || '#eeeeee',

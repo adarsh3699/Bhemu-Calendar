@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
 	startOfWeek,
@@ -8,18 +8,18 @@ import {
 	addWeeks,
 	subWeeks,
 	getHours,
-	getMinutes,
 	addHours,
 	setHours,
 	setMinutes,
+	getMinutes,
+	differenceInMinutes,
 } from 'date-fns';
-import { DragDropContext } from '@hello-pangea/dnd';
 import { openModal } from '../redux/reducers/uiSlice';
 import { updateEvent, updateEventOptimistically } from '../redux/reducers/eventsSlice';
 import TimeSlot from './TimeSlot';
 import '../styles/WeekView.css';
 
-const WeekView = () => {
+const WeekView = forwardRef((props, ref) => {
 	const dispatch = useDispatch();
 	const { events } = useSelector((state) => state.events);
 	const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -55,46 +55,61 @@ const WeekView = () => {
 		);
 	};
 
-	// Handle drag and drop with optimistic updates
+	// Handle drag end for events inside the calendar
 	const handleDragEnd = (result) => {
-		if (!result.destination) return;
+		// The parent App component already has the DragDropContext
+		// so we don't need to wrap our component in another one
 
-		const { draggableId, destination } = result;
-		const eventId = draggableId;
-		const targetEvent = events.find((event) => event._id === eventId);
+		if (!result.destination || result.type !== 'DEFAULT') return;
 
-		if (!targetEvent) return;
+		const { draggableId, source, destination } = result;
+		// Skip if not an event
+		if (!draggableId.startsWith('event-')) return;
 
-		// Parse destination ID format: day-hour
-		const [dayIndex, hour] = destination.droppableId.split('-').map(Number);
-		const newDate = weekDays[dayIndex];
+		const eventId = draggableId.replace('event-', '');
+		const event = events.find((e) => e._id === eventId);
 
-		// Calculate new times
-		const minutes = getMinutes(new Date(targetEvent.startTime));
-		const duration = new Date(targetEvent.endTime) - new Date(targetEvent.startTime);
+		if (!event) return;
 
-		const newStartTime = setMinutes(setHours(newDate, hour), minutes);
-		const newEndTime = new Date(newStartTime.getTime() + duration);
+		// Parse source and destination IDs to get day index and hour
+		const [sourceDayIndex, _sourceHour] = source.droppableId.split('-').map(Number);
+		const [destDayIndex, destHour] = destination.droppableId.split('-').map(Number);
 
-		// Create the updated event object
+		// Get the corresponding day objects
+		const sourceDay = weekDays[sourceDayIndex];
+		const destDay = weekDays[destDayIndex];
+
+		if (!sourceDay || !destDay) return;
+
+		// Calculate the time difference in minutes
+		const sourceDatetime = new Date(event.startTime);
+		const eventDuration = differenceInMinutes(new Date(event.endTime), sourceDatetime);
+		const minutesInCurrentHour = getMinutes(sourceDatetime);
+
+		// Create new start and end times
+		const newStartTime = setMinutes(setHours(new Date(destDay), destHour), minutesInCurrentHour);
+		const newEndTime = new Date(newStartTime);
+		newEndTime.setMinutes(newStartTime.getMinutes() + eventDuration); // Add duration in minutes
+
+		// Create updated event object
 		const updatedEvent = {
-			...targetEvent,
-			date: newDate.toISOString(),
+			...event,
+			date: destDay.toISOString(),
 			startTime: newStartTime.toISOString(),
 			endTime: newEndTime.toISOString(),
 		};
 
-		// Optimistically update the UI
+		// Apply optimistic update first
 		dispatch(updateEventOptimistically({ id: eventId, event: updatedEvent }));
 
-		// Update the event in the backend
-		dispatch(updateEvent({ id: eventId, event: updatedEvent }))
-			.unwrap()
-			.catch((error) => {
-				console.error('Failed to update event:', error);
-				// The error case is handled in the reducer
-			});
+		// Then dispatch the actual API update
+		dispatch(updateEvent({ id: eventId, event: updatedEvent }));
 	};
+
+	// Expose the handleDragEnd method to parent components
+	useImperativeHandle(ref, () => ({
+		handleDragEnd,
+	}));
 
 	return (
 		<div className="week-view">
@@ -125,41 +140,43 @@ const WeekView = () => {
 				</div>
 
 				{/* Days with time slots */}
-				<DragDropContext onDragEnd={handleDragEnd}>
-					<div className="days-container">
-						{weekDays.map((day, dayIndex) => (
-							<div key={format(day, 'yyyy-MM-dd')} className="day-column">
-								<div className="day-header">
-									<div className="day-name">{format(day, 'EEE')}</div>
-									<div className="day-date">{format(day, 'd')}</div>
-								</div>
-
-								{timeSlots.map((hour) => (
-									<TimeSlot
-										key={`${dayIndex}-${hour}`}
-										day={day}
-										dayIndex={dayIndex}
-										hour={hour}
-										events={events.filter((event) => {
-											const eventDate = new Date(event.date);
-											const eventStartHour = getHours(new Date(event.startTime));
-											return (
-												eventDate.getDate() === day.getDate() &&
-												eventDate.getMonth() === day.getMonth() &&
-												eventDate.getFullYear() === day.getFullYear() &&
-												eventStartHour === hour
-											);
-										})}
-										onClick={() => handleTimeSlotClick(day, hour)}
-									/>
-								))}
+				<div className="days-container">
+					{weekDays.map((day, dayIndex) => (
+						<div
+							key={format(day, 'yyyy-MM-dd')}
+							className="day-column"
+							data-date={format(day, 'yyyy-MM-dd')}
+						>
+							<div className="day-header">
+								<div className="day-name">{format(day, 'EEE')}</div>
+								<div className="day-date">{format(day, 'd')}</div>
 							</div>
-						))}
-					</div>
-				</DragDropContext>
+
+							{timeSlots.map((hour) => (
+								<TimeSlot
+									key={`${dayIndex}-${hour}`}
+									day={day}
+									dayIndex={dayIndex}
+									hour={hour}
+									events={events.filter((event) => {
+										const eventDate = new Date(event.date);
+										const eventStartHour = getHours(new Date(event.startTime));
+										return (
+											eventDate.getDate() === day.getDate() &&
+											eventDate.getMonth() === day.getMonth() &&
+											eventDate.getFullYear() === day.getFullYear() &&
+											eventStartHour === hour
+										);
+									})}
+									onClick={() => handleTimeSlotClick(day, hour)}
+								/>
+							))}
+						</div>
+					))}
+				</div>
 			</div>
 		</div>
 	);
-};
+});
 
 export default WeekView;
