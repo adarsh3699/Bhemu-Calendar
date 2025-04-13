@@ -1,5 +1,6 @@
 .goals-sidebar {
-    width: 280px;
+    width: 300px;
+    min-width: 280px;
     background-color: #f9f9f9;
     border-right: 1px solid var(--border-color);
     display: flex;
@@ -111,6 +112,19 @@
     overflow-y: auto;
 }
 
+.goal-item,
+.task-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.goal-content,
+.task-content {
+    flex: 1;
+    overflow: hidden;
+}
+
 .goal-item {
     margin-bottom: 8px;
     padding: 10px 12px;
@@ -218,4 +232,32 @@
     padding: 4px;
     border-radius: 4px;
     z-index: 200;
+}
+
+.delete-button {
+    color: #777;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 2px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    opacity: 0.5;
+}
+
+.delete-button:hover {
+    color: #f44336;
+    background-color: rgba(244, 67, 54, 0.1);
+    opacity: 1;
+}
+
+.goal-item:hover .delete-button,
+.task-item:hover .delete-button {
+    opacity: 0.8;
 }

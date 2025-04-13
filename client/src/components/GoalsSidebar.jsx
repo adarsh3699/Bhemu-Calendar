@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Draggable, Droppable } from '@hello-pangea/dnd';
-import { fetchGoals, setSelectedGoal, createGoal } from '../redux/reducers/goalsSlice';
-import { fetchTasksByGoal, createTask } from '../redux/reducers/tasksSlice';
+import { fetchGoals, setSelectedGoal, createGoal, deleteGoal } from '../redux/reducers/goalsSlice';
+import { fetchTasksByGoal, createTask, deleteTask } from '../redux/reducers/tasksSlice';
 import '../styles/GoalsSidebar.css';
 
 // Map category to colors
@@ -87,6 +87,20 @@ const GoalsSidebar = () => {
 		}
 	};
 
+	const handleDeleteGoal = (e, goalId) => {
+		e.stopPropagation(); // Prevent goal selection when deleting
+		if (window.confirm('Are you sure you want to delete this goal and all its tasks?')) {
+			dispatch(deleteGoal(goalId));
+		}
+	};
+
+	const handleDeleteTask = (e, taskId) => {
+		e.stopPropagation(); // Prevent task drag when deleting
+		if (window.confirm('Are you sure you want to delete this task?')) {
+			dispatch(deleteTask(taskId));
+		}
+	};
+
 	return (
 		<div className="goals-sidebar">
 			{/* Goals Section */}
@@ -158,8 +172,17 @@ const GoalsSidebar = () => {
 											: 'white',
 								}}
 							>
-								<div className="goal-title">{goal.title}</div>
-								<div className="goal-category">{goal.category}</div>
+								<div className="goal-content">
+									<div className="goal-title">{goal.title}</div>
+									<div className="goal-category">{goal.category}</div>
+								</div>
+								<button
+									className="delete-button"
+									onClick={(e) => handleDeleteGoal(e, goal._id)}
+									title="Delete Goal"
+								>
+									×
+								</button>
 							</li>
 						))}
 					</ul>
@@ -241,23 +264,29 @@ const GoalsSidebar = () => {
 															categoryColors[selectedGoal.category] || '#cccccc',
 													}}
 												>
-													<div className="task-title">{task.title}</div>
-													<div className="task-details">
-														<span className="task-priority">{task.priority}</span>
-														<span className="task-status">
-															{task.completed ? 'Completed' : 'Pending'}
-														</span>
+													<div className="task-content">
+														<div className="task-title">{task.title}</div>
+														<div className="task-details">
+															<span className="task-priority">{task.priority}</span>
+															<span className="task-status">
+																{task.completed ? 'Completed' : 'Pending'}
+															</span>
+														</div>
 													</div>
-													{snapshot.isDragging && (
-														<div className="drag-hint">Drop on calendar to schedule</div>
-													)}
+													<button
+														className="delete-button"
+														onClick={(e) => handleDeleteTask(e, task._id)}
+														title="Delete Task"
+													>
+														×
+													</button>
 												</li>
 											)}
 										</Draggable>
 									))}
+									{provided.placeholder}
 								</ul>
 							)}
-							{provided.placeholder}
 						</div>
 					)}
 				</Droppable>

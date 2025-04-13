@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { DragDropContext } from '@hello-pangea/dnd';
-import { fetchEvents } from './redux/reducers/eventsSlice';
+import { fetchEvents, createEvent } from './redux/reducers/eventsSlice';
 import { fetchGoals } from './redux/reducers/goalsSlice';
 import WeekView from './components/WeekView';
 import EventModal from './components/EventModal';
 import GoalsSidebar from './components/GoalsSidebar';
-import { openModal } from './redux/reducers/uiSlice';
 import './styles/App.css';
 
 function App() {
@@ -54,21 +53,17 @@ function App() {
 			const endTime = new Date(startTime);
 			endTime.setHours(hour + 1, 0, 0, 0);
 
-			// Open the event modal with pre-filled task information
-			dispatch(
-				openModal({
-					date: date.toISOString(),
-					timeSlot: {
-						start: startTime.toISOString(),
-						end: endTime.toISOString(),
-					},
-					taskData: {
-						taskId: task._id,
-						title: task.title,
-						category: selectedGoal.category,
-					},
-				})
-			);
+			// Create event directly instead of opening the modal
+			const newEvent = {
+				title: task.title,
+				category: selectedGoal.category,
+				date: date.toISOString(),
+				startTime: startTime.toISOString(),
+				endTime: endTime.toISOString(),
+				taskId: task._id,
+			};
+
+			dispatch(createEvent(newEvent));
 		}
 		// For event drags (calendar internal drags), delegate to the WeekView component
 		else if (draggableId.startsWith('event-') && destination.droppableId.includes('-')) {
